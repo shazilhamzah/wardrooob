@@ -1,0 +1,3 @@
+stage1/venv
+stage1/.pytest_cache
+stage1/models
