@@ -1,3 +1,4 @@
-stage1/venv
-stage1/.pytest_cache
-stage1/models
+stage1_clothes_measurement/venv
+stage1_clothes_measurement/.pytest_cache
+stage1_clothes_measurement/models
+stage2_human_modeling/venv

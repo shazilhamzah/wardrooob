@@ -15,112 +15,128 @@ Instead of manually measuring garments or struggling to remember how a specific 
 
 ---
 
-## 🚀 Stage 1: Core Python Logic & Machine Learning Pipeline
+## 🚀 Repository Structure
 
-In **Stage 1**, we have built the core python logic, computer vision pipeline, and validation tools.
+The project is split into distinct stages:
+
+```
+clothes/
+├── README.md                           <-- Main documentation
+├── .gitignore                          <-- Root ignore file
+│
+├── stage1_clothes_measurement/          <-- Core Python clothing logic & measurements
+│   ├── venv/                           <-- Dedicated virtual environment for clothes processing
+│   ├── input_images/                   <-- Flat clothing photos
+│   ├── output/                         <-- Extracted measurement JSONs, masks, overlays
+│   ├── models/                         <-- Models specific to clothes (tiny_vit, birefnet, hrnet)
+│   ├── scripts/                        <-- Python logic (run_garmentiq.py, evaluate_accuracy.py)
+│   ├── tests/                          <-- Test suites
+│   └── auto/                           <-- PowerShell run shortcuts
+│
+└── stage2_human_modeling/              <-- Human body shape estimator (SHAPY)
+    ├── venv/                           <-- Dedicated virtual environment for SHAPY
+    ├── regressor/                      <-- SHAPY regressor scripts
+    ├── measurements/                   <-- Virtual measurement calculations
+    ├── attributes/                     <-- S2A and A2S model files
+    ├── samples/                        <-- Input person photos and output SMPL-X parameters / meshes
+    ├── data/                           <-- SHAPY models and configuration weights
+    ├── extract_keypoints.py            <-- Keypoint extractor (MediaPipe)
+    └── run_pipeline.ps1                <-- SHAPY run script
+```
+
+---
+
+## 👕 Stage 1: Clothes Measurement Pipeline
+
+This stage focuses on the core Python logic for garment classification, background segmentation, and measurement extraction.
 
 ### 1. Unified Computer Vision Pipeline (`run_garmentiq.py`)
-At this stage, the project integrates the **GarmentIQ** framework to orchestrate:
+Integrates the **GarmentIQ** framework to orchestrate:
 *   **Garment Classification:** A fine-tuned **TinyViT** transformer model that automatically identifies the clothing type (e.g., shirt, trousers).
-*   **Garment Segmentation:** A high-precision **BiRefNet** model that isolates the garment, creating a clean segmentation mask and replacing the original background with a solid green screen (chromakey style).
+*   **Garment Segmentation:** A high-precision **BiRefNet** model that isolates the garment, replacing the original background with a solid green screen (chromakey style).
 *   **Landmark Detection:** An **HRNet** (PoseHighResolutionNet) keypoint detection model that pinpoints functional measurement vertices on the garment (collar corners, shoulders, waist edges, cuffs).
 *   **Measurement Extraction:** Computes exact pixel distances between corresponding landmarks to determine size proportions.
 
 ### 2. Accuracy Evaluator (`evaluate_accuracy.py`)
-Because pixels do not directly translate to real-world dimensions, the evaluator:
-*   Calibrates the system using a known reference dimension (e.g., the front length of a shirt in inches) from a ground truth JSON file.
-*   Computes a scaling factor (`inches/pixel`) and translates all other pixel distances into physical measurements.
-*   Outputs absolute error and percentage error relative to actual manual measurements.
+Calibrates the system using a known reference dimension (e.g., the front length of a shirt in inches) from a ground truth JSON file to output absolute/percentage error relative to manual measurements.
+
+### 📸 Stage 1 Showcase
+Here is a visual demonstration of the unified pipeline executing on sample garments:
+
+#### 1. Input Images
+| Shirt | Trousers |
+| :---: | :------: |
+| ![Shirt Input](stage1_clothes_measurement/input_images/shirt_badbg2.jpeg) | ![Trousers Input](stage1_clothes_measurement/input_images/trousers_badbg2.jpeg) |
+
+#### 2. Isolated Garments (Background Removed)
+| Shirt Isolated | Trousers Isolated |
+| :---: | :------: |
+| ![Shirt Background Removed](stage1_clothes_measurement/output/bg_modified_image/shirt_badbg2_bg_modified.png) | ![Trousers Background Removed](stage1_clothes_measurement/output/bg_modified_image/trousers_badbg2_bg_modified.png) |
+
+#### 3. Segmentation Masks
+| Shirt Mask | Trousers Mask |
+| :---: | :------: |
+| ![Shirt Mask](stage1_clothes_measurement/output/mask_image/shirt_badbg2_mask.png) | ![Trousers Mask](stage1_clothes_measurement/output/mask_image/trousers_badbg2_mask.png) |
+
+#### 4. Landmark Measurement Overlays
+| Shirt Measurements | Trousers Measurements |
+| :---: | :------: |
+| ![Shirt Measurements](stage1_clothes_measurement/output/measurement_image/shirt_badbg2_measurement.png) | ![Trousers Measurements](stage1_clothes_measurement/output/measurement_image/trousers_badbg2_measurement.png) |
 
 ---
 
-## 📸 Visual Walkthrough (Stage 1 Showcase)
+## 👤 Stage 2: Human Body Shape Modeling (SHAPY)
 
-Here is a visual demonstration of the unified pipeline executing on sample garments:
+This stage leverages **SHAPY** (Accurate 3D Body Shape Regression using Metric and Semantic Attributes) to estimate the 3D body shape and metric measurements of a person from a single image.
 
-### 1. Input Images
-These are the raw, unedited photographs of garments laid flat:
+### 1. Keypoint Extraction (`extract_keypoints.py`)
+Extracts OpenPose-compatible 2D human keypoints from images using **MediaPipe** to serve as shape landmarks.
 
-| Shirt | Trousers |
-| :---: | :------: |
-| ![Shirt Input](stage1/input_images/shirt_badbg2.jpeg) | ![Trousers Input](stage1/input_images/trousers_badbg2.jpeg) |
+### 2. Shape Regressor (`regressor/demo.py`)
+Predicts body shape represented as **SMPL-X** parameters and 3D mesh files from a single input photo of a person.
 
-### 2. Isolated Garments (Background Removed)
-The background segmentation model extracts the clothes and superimposes them onto a green screen background:
-
-| Shirt Isolated | Trousers Isolated |
-| :---: | :------: |
-| ![Shirt Background Removed](stage1/output/bg_modified_image/shirt_badbg2_bg_modified.png) | ![Trousers Background Removed](stage1/output/bg_modified_image/trousers_badbg2_bg_modified.png) |
-
-### 3. Segmentation Masks
-Binary masks representing the isolated garment shape:
-
-| Shirt Mask | Trousers Mask |
-| :---: | :------: |
-| ![Shirt Mask](stage1/output/mask_image/shirt_badbg2_mask.png) | ![Trousers Mask](stage1/output/mask_image/trousers_badbg2_mask.png) |
-
-### 4. Landmark Measurement Overlays
-Visualizes the detected landmarks and measurement trajectories calculated by HRNet:
-
-| Shirt Measurements | Trousers Measurements |
-| :---: | :------: |
-| ![Shirt Measurements](stage1/output/measurement_image/shirt_badbg2_measurement.png) | ![Trousers Measurements](stage1/output/measurement_image/trousers_badbg2_measurement.png) |
+### 3. Virtual Measurements (`measurements/virtual_measurements.py`)
+Calculates anthropometric metric body measurements (height, weight, chest/waist/hip circumferences) directly from the generated 3D human mesh topology.
 
 ---
 
 ## 🛠️ Local Installation & Setup
 
-Since the model weights are not hosted/deployed directly in the cloud, you must set up the project locally. Follow these steps:
-
-### 1. Prerequisites
-Ensure you have Python 3.11+ installed.
-
-### 2. Set Up Virtual Environment & Dependencies
-Clone the repository, navigate to the `stage1` directory, and set up your virtual environment:
-
+### 1. Stage 1 (Clothes Measurement) Setup
+Navigate to the Stage 1 directory, create a virtual environment, and install dependencies:
 ```powershell
-cd stage1
+cd stage1_clothes_measurement
 python -m venv venv
 .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
-*(Ensure PyTorch with GPU support is configured if you wish to run the models on CUDA).*
 
-### 3. Download the Model Weights
-Because these models are large and not stored in git, download them from Hugging Face and place them in the correct directories:
+Download model weights and place them in the correct paths:
+*   [tiny_vit_inditex_finetuned.pt](https://huggingface.co/lygitdata/garmentiq/resolve/main/tiny_vit_inditex_finetuned.pt) -> `stage1_clothes_measurement/models/`
+*   [hrnet.pth](https://huggingface.co/lygitdata/garmentiq/resolve/main/hrnet.pth) -> `stage1_clothes_measurement/models/`
+*   [model.safetensors (BiRefNet)](https://huggingface.co/lygitdata/BiRefNet_garmentiq_backup/resolve/main/model.safetensors) -> `stage1_clothes_measurement/models/birefnet/`
 
-Create the folder structure inside `stage1`:
-```
-stage1/
-└── models/
-    ├── birefnet/
-    │   └── model.safetensors
-    ├── hrnet.pth
-    └── tiny_vit_inditex_finetuned.pt
-```
-
-#### Download Links:
-*   **TinyViT Model (Garment Classification):**  
-    Download [tiny_vit_inditex_finetuned.pt](https://huggingface.co/lygitdata/garmentiq/resolve/main/tiny_vit_inditex_finetuned.pt) and place it in `stage1/models/`.
-*   **HRNet Model (Landmark Detection):**  
-    Download [hrnet.pth](https://huggingface.co/lygitdata/garmentiq/resolve/main/hrnet.pth) and place it in `stage1/models/`.
-*   **BiRefNet Model (Segmentation):**  
-    Download [model.safetensors](https://huggingface.co/lygitdata/BiRefNet_garmentiq_backup/resolve/main/model.safetensors) and place it in `stage1/models/birefnet/`.
-
----
-
-## 🏃 Running the Scripts
-
-Once installation and model configuration are complete, you can execute the following scripts using the PowerShell shortcuts located in `stage1/auto/`:
-
-### 1. Run GarmentIQ Pipeline
-Scans all images in `stage1/input_images`, classifies them, generates segmentation masks, and exports extracted pixel measurements to the `stage1/output/` folder.
+Run the scripts:
 ```powershell
+# Run garmentiq pipeline
 .\auto\run_garmentiq.ps1
+
+# Run accuracy evaluation
+.\auto\run_evaluate_accuracy.ps1
 ```
 
-### 2. Run Accuracy Evaluation
-Compares the predicted pixel measurements against manual real-world measurement values logged in `stage1/actual_measurements/` to print accuracy stats.
+### 2. Stage 2 (Human Modeling) Setup
+Because SHAPY relies on specific dependencies, it must run inside its own virtual environment in the `stage2` directory:
 ```powershell
-.\auto\run_evaluate_accuracy.ps1
+cd stage2_human_modeling
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Download the SHAPY model weights and data directories from Hugging Face / MPI SHAPY release and structure them inside `stage2_human_modeling/data/` as per the SHAPY installation guide.
+
+Run the pipeline:
+```powershell
+.\run_pipeline.ps1
 ```
